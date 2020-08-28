@@ -5,8 +5,8 @@ DOCKER_IMAGE_NAME?=$(PROJECT_NAME)
 DOCKER_IMAGE_TAG?=$(BUILD_NUMBER)
 
 build:
-	rm -rf tmp && cp -r ../common tmp
-	shellcheck entrypoint.sh stupid-curl
+	rm -rf tmp && cp -r ../common tmp 
+	shellcheck entrypoint.sh stupid-curl tmp/common_functions
 	docker build -t $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME):$(DOCKER_IMAGE_TAG) .
 
 shell:
