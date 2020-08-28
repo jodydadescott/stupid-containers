@@ -1,0 +1,14 @@
+#!/bin/bash
+
+IMAGE_REPO="jodydadescott"
+IMAGE_NAME="stupid-builder"
+IMAGE_TAG="latest"
+
+function main() {
+  err "$PWD mounted to container /build"
+  docker run -it --rm -v "${PWD}:/build"  "${IMAGE_REPO}/${IMAGE_NAME}:${IMAGE_TAG}" bash
+}
+
+function err() { echo "$@" 1>&2; }
+
+main "$@"

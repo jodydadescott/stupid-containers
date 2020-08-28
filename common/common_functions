@@ -1,0 +1,122 @@
+#!/bin/bash
+
+# 'shellcheck disable=SC1090'
+# And this line
+# source "$(dirname "$0")/common_functions" || { echo "Failed to $(dirname "$0")/common_functions" 1>&2; exit 2; }
+
+function exit() {
+  # Override this function in script
+  err "Exit not overridden"
+}
+
+function waitforfile() {
+  # Wait on a given file to exist
+  [[ $1 ]] || { err "Usage: *filename* time_to_wait_secs"; return 2; }
+  [[ $2 ]] || { err "Usage: filename *time_to_wait_secs*"; return 2; }
+
+  assertpositiveint "$2" || return 2
+
+  err "Waiting on file $1 to exist:"
+  local c=0
+  local i=0
+  while true; do
+    ((c=c+1))
+    ((i=i+1))
+    [ -f "$1" ] && { err "File $1 exist";  return 0; }
+    [ "$i" -gt 30 ] && { err "Still waiting on file $1 to exist"; i=0; }
+
+    [ "$2" -eq 0 ] || {
+      [ "$c" -gt "$2" ] && { err "Giving up because max tries reached";  return 3; }
+    }
+    sleepfor 2 || { err " Giving up because of shutdown"; return 3; }
+  done
+}
+
+function assertvarset() {
+  # Assert that a var is set. Must receive var as string eg MY_VAR not $MY_VAR
+  [[ $1 ]] || { err "Usage: var"; return 2; }
+  [[ $(eval echo "\${$1}") ]]  || { err "Env var $1 is not set"; return 3; }
+  return 0
+}
+
+function assertfileexist() {
+  # Assert that a file exist
+  [[ $1 ]] || { err "Usage: filename"; return 2; }
+  [ -f "$1" ] || { err "File $1 does not exist"; return 3; }
+  return 0
+}
+
+function makedir() {
+  # Make Directory if it does not exist
+  [[ $1 ]] || { err "Usage: directory"; return 2; }
+  [ -d "$1" ] && return 0
+  mkdir -p "$1" || { err "Failed to mkdir $1"; return 3; }
+  return 0
+}
+
+function sigterm() { run=false; }
+function sigint() { run=false; }
+function sighup() { true; }
+
+function assertpositiveint() {
+  # Assert that arg is positive integer including 0
+  [[ $1 ]] || { err "Usage: arg"; return 2; }
+  [ "$1" -eq "$1" ] || { err "$1 is must be a positive integer"; return 2; }
+  [ "$1" -ge 0 ] || { err "$1 is an integer but must be positive or zero"; return 2; }
+  return 0
+}
+
+function sleepfor() {
+  # Function to sleep for a period of given seconds or until run is false
+  # If sleep time is 0 we sleep until run is false
+  [[ $1 ]] || { err "Usage: seconds"; return 2; }
+  assertpositiveint "$1" || return 2
+
+  # Sleep forever or until run is false. If shutdown is called before
+  # sleep is over we return non-zero
+  [ "$1" -eq 0 ] && {
+    while true; do
+      $run || return 3
+      sleep 1
+    done
+    return 0
+  }
+
+  # Sleep for a period of time or until run is false
+  # Always return 0
+  local c=0
+  while true; do
+    $run || return 3
+    ((c=c+1))
+    sleep 1
+    $run || return 3
+    [ "$c" -ge "$1" ] && return 0
+  done
+}
+
+function runloop() {
+  # Use this to run a lopp 
+  [[ $1 ]] || { err "Usage: seconds"; return 2; }
+  assertpositiveint "$1" || return 2
+
+  local c=0
+  while true; do
+    ((c=c+1))
+    $run || return 3
+    sleep 1
+    $run || return 3
+    [ "$c" -ge "$1" ] && { loop || return 3; }
+  done
+}
+
+function loop() {
+  err "If you are seeing this the loop function was not overridden"
+}
+
+function err() { echo "$@" 1>&2; }
+
+export run=true
+trap sigterm SIGTERM
+trap sigint SIGINT
+trap sighup SIGHUP
+trap exit EXIT

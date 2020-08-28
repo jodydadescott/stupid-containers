@@ -1,0 +1,13 @@
+#!/bin/bash
+
+IMAGE_REPO="jodydadescott"
+IMAGE_NAME="stupid-kerberos"
+IMAGE_TAG="latest"
+
+function main() {
+  docker run -it --rm -v "${PWD}:/stupid-kerberos"  "${IMAGE_REPO}/${IMAGE_NAME}:${IMAGE_TAG}" bash
+}
+
+function err() { echo "$@" 1>&2; }
+
+main "$@"
